@@ -1,5 +1,5 @@
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 
 module Zipper
@@ -72,13 +72,13 @@ value = btValue . zFocus
 
 -- | Get the left child of the focus node, if any.
 left :: Zipper a -> Maybe (Zipper a)
-left Zipper {zFocus=BT v ml mr, zContext} = do
+left Zipper {zFocus = BT v ml mr, zContext} = do
   l <- ml
   pure $ Zipper l ((v, LBranch, mr) : zContext)
 
 -- | Get the right child of the focus node, if any.
 right :: Zipper a -> Maybe (Zipper a)
-right Zipper {zFocus=BT v ml mr, zContext} = do
+right Zipper {zFocus = BT v ml mr, zContext} = do
   r <- mr
   pure $ Zipper r ((v, RBranch, ml) : zContext)
 

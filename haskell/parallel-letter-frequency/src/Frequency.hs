@@ -17,5 +17,5 @@ frequency n =
 frequency' :: T.Text -> M.Map Char Int
 frequency' =
   M.fromListWith (+)
-    . concatMap (\ch -> [(ch, 1) | isLetter ch])
+    . concatMap (\ch -> [(toLower ch, 1) | isLetter ch])
     . T.unpack
