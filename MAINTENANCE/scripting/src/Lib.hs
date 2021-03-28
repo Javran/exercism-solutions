@@ -71,7 +71,11 @@ runAllTests = sh $ do
         result@(ec, _, _) <- systemStrictWithErr (mkCp "ew" ["test"]) ""
         liftIO $ MSem.signal sem
         liftIO $ do
-          putStr (if ec == ExitSuccess then "." else "!")
+          if ec == ExitSuccess
+            then putStr "."
+            else do
+              putStrLn $ "\nFailed: " <> T.unpack exerName
+              putStr "!"
           System.IO.hFlush System.IO.stdout
         pure (exerName, result)
   sem <- liftIO $ MSem.new (10 :: Int)
@@ -91,4 +95,6 @@ main =
   getArgs >>= \case
     "ltsupdate" : _ -> ltsUpdater
     "testall" : _ -> runAllTests
-    _ -> pure ()
+    xs -> do
+      putStrLn $ "Unknown: " <> show xs
+      exitFailure
