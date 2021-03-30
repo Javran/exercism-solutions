@@ -13,6 +13,7 @@ import Control.Applicative
 import qualified Control.Concurrent.MSem as MSem
 import qualified Control.Foldl as Fold
 import Control.Monad
+import Control.Monad.IO.Class
 import Data.Maybe
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -31,25 +32,31 @@ import Prelude hiding (FilePath)
   Following environment variables are required for some of those scripts to work:
 
   - EXERCISM_WORKSPACE
-  - HASKELL_REPO
   - TARGET_RESOLVER
 
   example setup in a shell script:
 
 ```
 export EXERCISM_WORKSPACE=$(exercism workspace)
-export HASKELL_REPO=$EXERCISM_WORKSPACE/haskell
 export TARGET_RESOLVER=lts-16.31
 ```
 
  -}
 
 fpToText :: FilePath -> T.Text
-fpToText = either id id . Filesystem.Path.CurrentOS.toText
+fpToText = either id id . Filesystem.Path.CurrentOS.toText -- TEST
+
+getExercismWorkspace :: (MonadIO m, MonadFail m) => m FilePath
+getExercismWorkspace = do
+  Just fp <- fmap fromText <$> need "EXERCISM_WORKSPACE"
+  pure fp
+
+getHaskellRepo :: (MonadIO m, MonadFail m) => m FilePath
+getHaskellRepo = (</> "haskell") <$> getExercismWorkspace
 
 ltsUpdater :: IO ()
 ltsUpdater = sh $ do
-  Just repo <- fmap fromText <$> need "HASKELL_REPO"
+  repo <- getHaskellRepo
   Just targetResolver <- need "TARGET_RESOLVER"
   xs <- reduce Fold.list $ do
     stackYaml <- find (suffix "stack.yaml") repo
@@ -64,7 +71,7 @@ runAllTests = sh $ do
   let skipping =
         -- set of exercise names that we'll skip.
         S.fromList []
-  Just repo <- fmap fromText <$> need "HASKELL_REPO"
+  repo <- getHaskellRepo
   exers <-
     catMaybes
       <$> reduce
