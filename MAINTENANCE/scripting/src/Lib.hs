@@ -27,6 +27,23 @@ import Turtle.Prelude
 import Turtle.Shell
 import Prelude hiding (FilePath)
 
+{-
+  Following environment variables are required for some of those scripts to work:
+
+  - EXERCISM_WORKSPACE
+  - HASKELL_REPO
+  - TARGET_RESOLVER
+
+  example setup in a shell script:
+
+```
+export EXERCISM_WORKSPACE=$(exercism workspace)
+export HASKELL_REPO=$EXERCISM_WORKSPACE/haskell
+export TARGET_RESOLVER=lts-16.31
+```
+
+ -}
+
 fpToText :: FilePath -> T.Text
 fpToText = either id id . Filesystem.Path.CurrentOS.toText
 
