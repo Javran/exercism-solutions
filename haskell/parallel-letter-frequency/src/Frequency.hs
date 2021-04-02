@@ -15,7 +15,9 @@ frequency n =
     . map frequency'
 
 frequency' :: T.Text -> M.Map Char Int
-frequency' =
-  M.fromListWith (+)
-    . concatMap (\ch -> [(toLower ch, 1) | isLetter ch])
-    . T.unpack
+frequency' = T.foldr go M.empty
+  where
+    go ch m =
+      if isAlpha ch
+        then M.insertWith (+) (toLower ch) 1 m
+        else m
