@@ -1,5 +1,4 @@
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
 module Deque
@@ -8,14 +7,13 @@ module Deque
   , pop
   , shift
   , unshift
-  , -- debugging function:
-    visitNodes
+  , visitNodes
   )
 where
 
-import Control.Lens
 import Control.Monad.Fix
 import Data.IORef
+import Lens.Micro
 
 -- INVARIANT: "Deque a" always point to a guard element
 type Deque a = IORef (Element a)
@@ -24,18 +22,24 @@ type NodeRef a = IORef (Element a)
 
 data Element a
   = Guard
-      { _ePrev :: IORef (Element a)
-      , _eNext :: IORef (Element a)
+      { _ePrev :: NodeRef a
+      , _eNext :: NodeRef a
       }
   | Item
-      { _ePrev :: IORef (Element a)
-      , _eNext :: IORef (Element a)
+      { _ePrev :: NodeRef a
+      , _eNext :: NodeRef a
       , _eContent :: a
       }
 
-makeLenses ''Element
-
 type RefLens a = Lens' (Element a) (NodeRef a)
+
+ePrev, eNext :: Lens' (Element a) (NodeRef a)
+ePrev f e = case e of
+  Guard {_ePrev = ep} -> (\newPrev -> e {_ePrev = newPrev}) <$> f ep
+  Item {_ePrev = ep} -> (\newPrev -> e {_ePrev = newPrev}) <$> f ep
+eNext f e = case e of
+  Guard {_eNext = en} -> (\newNext -> e {_eNext = newNext}) <$> f en
+  Item {_eNext = en} -> (\newNext -> e {_eNext = newNext}) <$> f en
 
 mkDeque :: IO (Deque a)
 mkDeque = mfix $ \r -> newIORef (Guard r r)
@@ -48,12 +52,12 @@ dqInsert dir revDir refCurrent v = do
   curNode <- readIORef refCurrent
   -- guard's next pointer points to the head
   let refNext = curNode ^. dir
-      -- note that because of the level of abstraction we have,
-      -- we are not able to figure out how to create this newNode
-      -- (since it requires properly assigne two refs)
-      -- so we just leave it blank ("undefined") and fill these two fields
-      -- immediately. thus "dir" and "revDir" are also responsible for
-      -- Item's creation
+      {-
+        Due to the fact that `dir` and `revDir` are abstracted,
+        we cannot initiate Item with _ePrev and _eNext set properly,
+        this is fine since we'll use lens to immediate replace those
+        two fields with the correct value.
+       -}
       newNode =
         Item undefined undefined v
           & dir .~ refNext
@@ -76,7 +80,10 @@ dqDelete dir revDir refCurrent = do
   let refNewNext = xNode ^. dir
   atomicModifyIORef_ refCurrent (& dir .~ refNewNext)
   atomicModifyIORef_ refNewNext (& revDir .~ refCurrent)
-  pure (xNode ^? eContent)
+  pure
+    (case xNode of
+       Guard {} -> Nothing
+       Item _ _ e -> Just e)
 
 unshift, push :: Deque a -> a -> IO ()
 unshift = dqInsert eNext ePrev

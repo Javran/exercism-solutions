@@ -9,7 +9,7 @@ library:
   source-dirs: src
   ghc-options: -Wall
   dependencies:
-    - lens
+    - microlens
 
 tests:
   test:
