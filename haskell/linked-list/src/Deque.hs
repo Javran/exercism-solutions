@@ -17,10 +17,6 @@ import Control.Lens
 import Control.Monad.Fix
 import Data.IORef
 
--- TODO: I don't know what's a proxy pattern
--- maybe I need to design some protocol and implement
--- all of the message handling?
-
 -- INVARIANT: "Deque a" always point to a guard element
 type Deque a = IORef (Element a)
 
