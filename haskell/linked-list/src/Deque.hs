@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 
@@ -33,13 +34,16 @@ data Element a
 
 type RefLens a = Lens' (Element a) (NodeRef a)
 
-ePrev, eNext :: Lens' (Element a) (NodeRef a)
-ePrev f e = case e of
-  Guard {_ePrev = ep} -> (\newPrev -> e {_ePrev = newPrev}) <$> f ep
-  Item {_ePrev = ep} -> (\newPrev -> e {_ePrev = newPrev}) <$> f ep
-eNext f e = case e of
-  Guard {_eNext = en} -> (\newNext -> e {_eNext = newNext}) <$> f en
-  Item {_eNext = en} -> (\newNext -> e {_eNext = newNext}) <$> f en
+ePrev, eNext :: RefLens a
+ePrev f e = (\newPrev -> e {_ePrev = newPrev}) <$> f (_ePrev e)
+eNext f e = (\newNext -> e {_eNext = newNext}) <$> f (_eNext e)
+
+eContent :: SimpleFold (Element a) a
+eContent =
+  folding
+    (\case
+       Guard {} -> Nothing
+       Item {_eContent = v} -> Just v)
 
 mkDeque :: IO (Deque a)
 mkDeque = mfix $ \r -> newIORef (Guard r r)
@@ -80,10 +84,7 @@ dqDelete dir revDir refCurrent = do
   let refNewNext = xNode ^. dir
   atomicModifyIORef_ refCurrent (& dir .~ refNewNext)
   atomicModifyIORef_ refNewNext (& revDir .~ refCurrent)
-  pure
-    (case xNode of
-       Guard {} -> Nothing
-       Item _ _ e -> Just e)
+  pure (xNode ^? eContent)
 
 unshift, push :: Deque a -> a -> IO ()
 unshift = dqInsert eNext ePrev
